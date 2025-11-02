@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Al Calorie Tracker</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* Minimalistic, modern, responsive UI */
+    :root{
+      --bg: #fbfdff;
+      --card: #ffffff;
+      --muted: #64748b;
+      --accent: #06b6d4; /* cyan-ish futuristic */
+      --glass: rgba(255,255,255,0.7);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(180deg, #f7fbfc 0%, #eef7f9 100%);
+      color:#0f172a;
+      padding:24px;
+    }
+
+    .container{
+      width:100%;
+      max-width:920px;
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      box-shadow: 0 8px 30px rgba(16,24,40,0.08);
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 1fr 420px;
+      gap:0;
+    }
+
+    @media (max-width:880px){
+      .card{grid-template-columns: 1fr; padding:0}
+    }
+
+    .left, .right{
+      padding:22px;
+    }
+
+    .header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .logo{
+      width:56px;
+      height:56px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg, rgba(6,182,212,0.12), rgba(6,182,212,0.06));
+      font-weight:700;
+      color:var(--accent);
+      font-size:18px;
+      box-shadow: inset 0 -1px 0 rgba(6,182,212,0.06);
+    }
+
+    h1{font-size:20px;margin:0}
+    p.lead{margin:6px 0 18px;color:var(--muted);font-size:13px}
+
+    .uploader{
+      border:2px dashed rgba(15,23,42,0.06);
+      border-radius:10px;
+      padding:14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      background: linear-gradient(180deg,#fff,#fbfeff);
+    }
+
+    .uploader input[type=file]{display:none}
+    .btn{
+      background:var(--accent);
+      color:white;
+      border:none;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow: 0 6px 18px rgba(6,182,212,0.12);
+    }
+    .btn.ghost{
+      background:transparent;
+      color:var(--accent);
+      border:1px solid rgba(6,182,212,0.12);
+      box-shadow:none;
+    }
+
+    .preview{
+      margin-top:12px;
+      border-radius:10px;
+      overflow:hidden;
+      background:#f8fbfd;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:160px;
+    }
+    .preview img{max-width:100%; display:block; object-fit:cover; width:100%}
+
+    .meta{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    label.small{font-size:12px;color:var(--muted)}
+
+    .settings{
+      display:flex;
+      gap:8px;
+      flex-direction:column;
+      margin-top:14px;
+    }
+
+    input[type="text"], input[type="number"], textarea{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(15,23,42,0.06);
+      background:transparent;
+      outline:none;
+      font-size:14px;
+    }
+
+    .analyze-row{
+      display:flex;
+      gap:10px;
+      margin-top:14px;
+      align-items:center;
+    }
+
+    .results{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .stat{
+      display:flex;
+      justify-content:space-between;
+      padding:10px 12px;
+      border-radius:10px;
+      background: linear-gradient(180deg,#fff,#fbfeff);
+      border:1px solid rgba(15,23,42,0.03);
+    }
+
+    .muted{color:var(--muted); font-size:13px}
+    .big{font-weight:700; font-size:18px}
+
+    .right{
+      border-left:1px solid rgba(15,23,42,0.03);
+      background:linear-gradient(180deg,#fbfeff,#f8fbfd);
+    }
+    @media (max-width:880px){
+      .right{border-left:none;border-top:1px solid rgba(15,23,42,0.03)}
+    }
+
+    .small-note{font-size:12px;color:var(--muted)}
+    .loading{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .footer{
+      margin-top:14px;
+      font-size:12px;
+      color:var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" role="application" aria-label="Al Calorie Tracker">
+      <div class="left">
+        <div class="header">
+          <div class="logo" aria-hidden>Al</div>
+          <div>
+            <h1>Al Calorie Tracker</h1>
+            <p class="lead">Estimate calories & macronutrients from a photo — fast, minimal, responsive.</p>
+          </div>
+        </div>
+
+        <div class="uploader" aria-hidden>
+          <label for="fileInput" class="btn ghost" id="selectBtn">Upload photo</label>
+          <input id="fileInput" type="file" accept="image/*" />
+          <div style="flex:1">
+            <div class="small-note">Supported: JPG/PNG. Keep photos clear with visible portions.</div>
+          </div>
+        </div>
+
+        <div class="preview" id="preview" aria-live="polite">
+          <div class="small-note">No image selected — upload a meal photo to analyze.</div>
+        </div>
+
+        <div class="meta">
+          <div style="flex:1">
+            <label class="small">API key</label>
+            <input id="apiKeyInput" type="text" placeholder="Paste OpenAI API key (optional for mock)" />
+          </div>
+          <div style="width:160px">
+            <label class="small">Portion weight (g) — optional</label>
+            <input id="portionInput" type="number" min="1" placeholder="e.g. 350" />
+          </div>
+        </div>
+
+        <div class="analyze-row">
+          <button class="btn" id="analyzeBtn" title="Analyze the uploaded image">Analyze</button>
+          <button class="btn ghost" id="clearBtn" title="Remove image & results">Clear</button>
+          <div id="loading" style="margin-left:auto;display:none" class="loading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M12 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <animateTransform attributeType="xml" attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+              </path>
+            </svg>
+            Analyzing...
+          </div>
+        </div>
+
+        <div class="results" id="results" aria-live="polite" style="display:none">
+          <div class="stat">
+            <div class="muted">Calories</div>
+            <div class="big" id="calories">—</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Protein (g)</div>
+            <div class="big" id="protein">—</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Fat (g)</div>
+            <div class="big" id="fat">—</div>
+          </div>
+          <div class="stat">
+            <div class="muted">Carbohydrates (g)</div>
+            <div class="big" id="carbs">—</div>
+          </div>
+          <div class="footer">
+            <div id="confidence" class="small-note"></div>
+            <div class="small-note">Tip: For better accuracy, include portion weight or a reference object in the photo.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="small-note">PFC breakdown</div>
+            <div style="font-weight:700">Protein · Fat · Carbs</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">Visual</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <canvas id="pfcChart" width="400" height="320" aria-hidden></canvas>
+        </div>
+
+        <div style="margin-top:18px">
+          <div class="small-note">Raw analysis</div>
+          <textarea id="rawOutput" rows="6" placeholder="GPT response (JSON) will appear here..." style="margin-top:8px"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================
+       Al Calorie Tracker - Single-file SPA
+       - Uses Chart.js for P/F/C visualization
+       - Sends the image to OpenAI Responses API (GPT) and asks for structured JSON output.
+       - If no API key provided, a quick mock estimator is used.
+       =========================== */
+
+    const fileInput = document.getElementById('fileInput');
+    const selectBtn = document.getElementById('selectBtn');
+    const preview = document.getElementById('preview');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const portionInput = document.getElementById('portionInput');
+    const loading = document.getElementById('loading');
+    const resultsEl = document.getElementById('results');
+    const caloriesEl = document.getElementById('calories');
+    const proteinEl = document.getElementById('protein');
+    const fatEl = document.getElementById('fat');
+    const carbsEl = document.getElementById('carbs');
+    const rawOutput = document.getElementById('rawOutput');
+    const confidenceEl = document.getElementById('confidence');
+
+    let currentImageBase64 = null;
+    let chart = null;
+
+    // Chart.js initial empty chart
+    const ctx = document.getElementById('pfcChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Protein (g)', 'Fat (g)', 'Carbs (g)'],
+        datasets: [{
+          data: [0,0,0],
+          backgroundColor: ['rgba(6,182,212,0.9)','rgba(59,130,246,0.9)','rgba(14,165,233,0.4)'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+
+    selectBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file.');
+        return;
+      }
+      // show preview and store base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        currentImageBase64 = dataUrl;
+        preview.innerHTML = `<img alt="Uploaded meal" src="${dataUrl}">`;
+      }
+      reader.readAsDataURL(file);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      fileInput.value = '';
+      currentImageBase64 = null;
+      preview.innerHTML = `<div class="small-note">No image selected — upload a meal photo to analyze.</div>`;
+      resultsEl.style.display = 'none';
+      rawOutput.value = '';
+    });
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (!currentImageBase64) {
+        alert('Please upload a photo of your meal first.');
+        return;
+      }
+      // show loading
+      loading.style.display = 'inline-flex';
+      analyzeBtn.disabled = true;
+      clearBtn.disabled = true;
+
+      const apiKey = apiKeyInput.value.trim();
+      const portion = Number(portionInput.value) || null;
+
+      try {
+        let analysis = null;
+        if (apiKey) {
+          analysis = await analyzeWithGPT(apiKey, currentImageBase64, portion);
+        } else {
+          analysis = await mockEstimate(currentImageBase64, portion);
+        }
+
+        applyAnalysis(analysis);
+      } catch (err) {
+        console.error(err);
+        alert('Analysis failed: ' + (err.message||err));
+      } finally {
+        loading.style.display = 'none';
+        analyzeBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+    });
+
+    function applyAnalysis(analysis){
+      // expected analysis: { calories:number, protein_g:number, fat_g:number, carbs_g:number, confidence?:number, raw?:string }
+      const c = analysis.calories ?? 0;
+      const p = analysis.protein_g ?? 0;
+      const f = analysis.fat_g ?? 0;
+      const carbs = analysis.carbs_g ?? 0;
+      const confidence = (analysis.confidence !== undefined) ? analysis.confidence : null;
+
+      caloriesEl.textContent = Math.round(c);
+      proteinEl.textContent = (Math.round(p*10)/10).toString();
+      fatEl.textContent = (Math.round(f*10)/10).toString();
+      carbsEl.textContent = (Math.round(carbs*10)/10).toString();
+
+      resultsEl.style.display = 'block';
+
+      // update chart
+      chart.data.datasets[0].data = [p,f,carbs];
+      chart.update();
+
+      // raw output for transparency
+      rawOutput.value = analysis.raw ?? JSON.stringify({calories:c, protein_g:p, fat_g:f, carbs_g:carbs, confidence:confidence}, null, 2);
+
+      confidenceEl.textContent = confidence !== null ? `Estimated confidence: ${(confidence*100).toFixed(0)}%` : '';
+    }
+
+    /* ---------------------------
+       GPT API call
+       - Uses Responses endpoint (POST /v1/responses)
+       - Sends the image as base64 (data URL) in an "input_image" element and instructs GPT to return JSON only.
+       - Parses assistant text (expects JSON only).
+       ---------------------------- */
+    async function analyzeWithGPT(apiKey, imageDataUrl, portionGrams){
+      // Trim the data URL header so GPT may accept image_url payload or keep as image data URL depending on API expectations.
+      // We'll pass the image as a data URL in the "image_url" field (some integrations accept inline base64).
+      // IMPORTANT: Check your specific OpenAI account docs if they require multi-part upload or direct image hosting; adjust accordingly.
+
+      // Build the user instruction that mandates strict JSON output
+      const userInstructionText = [
+        "You are an assistant that analyzes a meal photo and returns a concise nutritional estimate.",
+        "Return ONLY a single JSON object (no preamble) with these fields: calories (number), protein_g (number), fat_g (number), carbs_g (number), confidence (0-1).",
+        "If you provide ranges, convert to a single numeric estimate (use mid-point). Do not include any units in the JSON values.",
+        `Optional: If the user provided portion weight (grams) use it to improve your estimate: portion_g=${portionGrams || 'unknown'}.`,
+        "Explain nothing in the response — JSON only."
+      ].join(" ");
+
+      // Compose the payload for the Responses endpoint
+      const payload = {
+        model: "gpt-4.1-mini", // adjust to gpt-5 if available; keep model string easy to replace
+        input: [
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: userInstructionText },
+              { type: "input_image", image_url: imageDataUrl }
+            ]
+          }
+        ],
+        // we ask for a deterministic answer
+        temperature: 0.2,
+        max_output_tokens: 400
+      };
+
+      const resp = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`OpenAI API error: ${resp.status} ${resp.statusText} — ${txt}`);
+      }
+
+      const data = await resp.json();
+      // The Responses API can return a structure; attempt to find textual content in outputs.
+      // This implementation expects the assistant to return a JSON string as the first text output.
+
+      let assistantText = null;
+      try {
+        // search for outputs[*].content[*].text or outputs[*].content[*].parts etc.
+        if (Array.isArray(data.output) && data.output.length > 0) {
+          // older variant
+          assistantText = data.output[0].content[0].text ?? JSON.stringify(data.output[0]);
+        } else if (Array.isArray(data.output) && data.output.length === 0 && data?.outputs) {
+          assistantText = JSON.stringify(data.outputs);
+        } else if (Array.isArray(data?.items) && data.items.length) {
+          assistantText = data.items.map(i => i.text || '').join("\n");
+        } else if (data?.output?.[0]?.content?.[0]?.text) {
+          assistantText = data.output[0].content[0].text;
+        } else if (data?.choices?.[0]?.message?.content) {
+          assistantText = data.choices[0].message.content;
+        } else if (typeof data?.output === 'string') {
+          assistantText = data.output;
+        } else {
+          // fallback - convert full response
+          assistantText = JSON.stringify(data, null, 2);
+        }
+      } catch(e){
+        assistantText = JSON.stringify(data, null, 2);
+      }
+
+      // Put raw assistant text into textarea for transparency
+      const raw = (typeof assistantText === 'string') ? assistantText.trim() : JSON.stringify(assistantText);
+      rawOutput.value = raw;
+
+      // parse JSON from assistant text. Be forgiving: try to locate first {...} block
+      const jsonText = extractJson(raw);
+      if (!jsonText) {
+        throw new Error("Could not extract JSON from model output. See raw output for details.");
+      }
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (err) {
+        throw new Error("Failed to parse JSON from model output: " + err.message + "\n\nRaw: " + jsonText);
+      }
+
+      // Ensure numeric fields exist
+      const result = {
+        calories: Number(parsed.calories) || 0,
+        protein_g: Number(parsed.protein_g) || 0,
+        fat_g: Number(parsed.fat_g) || 0,
+        carbs_g: Number(parsed.carbs_g) || 0,
+        confidence: (parsed.confidence !== undefined) ? Number(parsed.confidence) : null,
+        raw: raw
+      };
+
+      return result;
+    }
+
+    // Helper: extract first JSON object substring from text
+    function extractJson(text){
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start === -1 || end === -1 || end <= start) return null;
+      return text.substring(start, end+1);
+    }
+
+    /* ---------------------------
+       Mock estimator (if no API key)
+       - Simple heuristic fallback: ask for portion_g or use generic estimates based on "visual density"
+       - This is NOT as accurate as a real model; it's a helpful demo for testing UI.
+       ---------------------------- */
+    async function mockEstimate(dataUrl, portionGrams){
+      // We can't analyze pixels reliably in the browser without ML libraries.
+      // We'll present a reasonable placeholder that asks the user to confirm or accept.
+      // Strategy:
+      // - If portionGrams provided, base estimates on common macronutrient ratios (balanced meal).
+      // - Otherwise propose a default 500 kcal meal with 20% protein, 30% fat, 50% carbs.
+      let calories = 500;
+      if (portionGrams) {
+        // crude heuristic: calories per 100g ~ 200 (average mixed meal), adjust by grams
+        calories = Math.round((portionGrams / 100) * 200);
+      }
+
+      // choose default P/F/C ratios
+      const proteinPerc = 0.20, fatPerc = 0.30, carbsPerc = 0.50;
+      // approximate grams: protein & carbs = 4 kcal/g, fat = 9 kcal/g
+      const protein_g = Math.max(1, Math.round((calories * proteinPerc) / 4));
+      const fat_g = Math.max(1, Math.round((calories * fatPerc) / 9));
+      const carbs_g = Math.max(1, Math.round((calories * carbsPerc) / 4));
+
+      const mock = {
+        calories,
+        protein_g,
+        fat_g,
+        carbs_g,
+        confidence: 0.35, // low confidence for mock
+        raw: JSON.stringify({source:'mock_estimate', portion_g: portionGrams, calories, protein_g, fat_g, carbs_g}, null, 2)
+      };
+
+      // small delay to mimic API latency
+     
